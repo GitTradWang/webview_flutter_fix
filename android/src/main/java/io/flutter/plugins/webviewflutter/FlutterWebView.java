@@ -4,9 +4,12 @@
 
 package io.flutter.plugins.webviewflutter;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
@@ -14,6 +17,7 @@ import android.os.Handler;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebStorage;
+import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
@@ -52,6 +56,9 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     platformThreadHandler = new Handler(context.getMainLooper());
     // Allow local storage.
     webView.getSettings().setDomStorageEnabled(true);
+
+    settings(webView);
+
     //启用混合模式
     if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
       webView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
@@ -299,6 +306,82 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
 
   private void updateUserAgent(String userAgent) {
     webView.getSettings().setUserAgentString(userAgent);
+  }
+
+  private void settings(WebView webView) {
+    WebSettings viewSettings = webView.getSettings();
+    viewSettings.setJavaScriptEnabled(true);
+    viewSettings.setSupportZoom(true);
+    viewSettings.setBuiltInZoomControls(false);
+    viewSettings.setSavePassword(false);
+    if (checkNetwork(webView.getContext())) {
+      //根据cache-control获取数据。
+      viewSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+    } else {
+      //没网，则从本地获取，即离线加载
+      viewSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      //适配5.0不允许http和https混合使用情况
+      viewSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+      webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+      webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+    } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+      webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+    }
+    viewSettings.setTextZoom(100);
+    viewSettings.setDatabaseEnabled(true);
+    viewSettings.setAppCacheEnabled(true);
+    viewSettings.setLoadsImagesAutomatically(true);
+    viewSettings.setSupportMultipleWindows(false);
+    // 是否阻塞加载网络图片  协议http or https
+    viewSettings.setBlockNetworkImage(false);
+    // 允许加载本地文件html  file协议
+    viewSettings.setAllowFileAccess(true);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+      // 通过 file url 加载的 Javascript 读取其他的本地文件 .建议关闭
+      viewSettings.setAllowFileAccessFromFileURLs(false);
+      // 允许通过 file url 加载的 Javascript 可以访问其他的源，包括其他的文件和 http，https 等其他的源
+      viewSettings.setAllowUniversalAccessFromFileURLs(false);
+    }
+    viewSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+
+      viewSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+    } else {
+      viewSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
+    }
+    viewSettings.setLoadWithOverviewMode(false);
+    viewSettings.setUseWideViewPort(false);
+    viewSettings.setDomStorageEnabled(true);
+    viewSettings.setNeedInitialFocus(true);
+    viewSettings.setDefaultTextEncodingName("utf-8");//设置编码格式
+    viewSettings.setDefaultFontSize(16);
+    viewSettings.setMinimumFontSize(12);//设置 WebView 支持的最小字体大小，默认为 8
+    viewSettings.setGeolocationEnabled(true);
+    String dir = webView.getContext().getCacheDir().getAbsolutePath() + "web_cache";
+    //设置数据库路径  api19 已经废弃,这里只针对 webkit 起作用
+    viewSettings.setGeolocationDatabasePath(dir);
+    viewSettings.setDatabasePath(dir);
+    viewSettings.setAppCachePath(dir);
+    //缓存文件最大值
+    viewSettings.setAppCacheMaxSize(Long.MAX_VALUE);
+  }
+
+  public static boolean checkNetwork(Context context) {
+
+    try {
+      ConnectivityManager connectivity = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+      if (connectivity == null) {
+        return false;
+      }
+      @SuppressLint("MissingPermission") NetworkInfo info = connectivity.getActiveNetworkInfo();
+      return info != null && info.isConnected();
+    } catch (Exception e) {
+
+    }
+    return true;
   }
 
   @Override
