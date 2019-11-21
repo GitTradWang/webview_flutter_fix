@@ -61,7 +61,21 @@
       [_javaScriptChannelNames addObjectsFromArray:javaScriptChannelNames];
       [self registerJavaScriptChannels:_javaScriptChannelNames controller:userContentController];
     }
-
+      
+    NSDictionary<NSString*, NSString*>* cookies = args[@"cookies"];
+      
+    if (cookies&& [cookies isKindOfClass:[NSDictionary class]]) {
+        NSMutableString *cookieString = [[NSMutableString alloc] init];
+          
+        for (NSString *key in cookies.allKeys) {
+          [cookieString appendFormat:@"document.cookie = '%@=%@';",key,cookies[key]];
+        }
+        
+        //js注入
+        WKUserScript * cookieScript = [[WKUserScript alloc] initWithSource: cookieString injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO];
+        [userContentController addUserScript:cookieScript];
+    }
+      
     NSDictionary<NSString*, id>* settings = args[@"settings"];
 
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];

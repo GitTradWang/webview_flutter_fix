@@ -37,6 +37,8 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
   private final FlutterWebViewClient flutterWebViewClient;
   private final Handler platformThreadHandler;
 
+  private Map<String, String> cookies;
+
   @TargetApi(VERSION_CODES.JELLY_BEAN_MR1)
   @SuppressWarnings("unchecked")
   FlutterWebView(
@@ -45,6 +47,8 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
       int id,
       Map<String, Object> params,
       final View containerView) {
+
+    cookies = (Map<String, String>) params.get("cookies");
 
     DisplayListenerProxy displayListenerProxy = new DisplayListenerProxy();
     DisplayManager displayManager =
@@ -82,6 +86,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     }
     if (params.containsKey("initialUrl")) {
       String url = (String) params.get("initialUrl");
+      FlutterCookieManager.setCookie(context, url, cookies);
       webView.loadUrl(url);
     }
   }
@@ -166,6 +171,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     if (headers == null) {
       headers = Collections.emptyMap();
     }
+    FlutterCookieManager.setCookie(getView().getContext(),url,cookies);
     webView.loadUrl(url, headers);
     result.success(null);
   }
