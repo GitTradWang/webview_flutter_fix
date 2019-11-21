@@ -86,13 +86,6 @@ class FlutterCookieManager implements MethodCallHandler {
     CookieManager cookieManager = CookieManager.getInstance();
     cookieManager.setAcceptCookie(true);
 
-
-    System.out.println("setCookie  url:  "+url);
-    System.out.println("setCookie  cookies:  "+cookies);
-    System.out.println("setCookie  domain:  "+domain);
-    System.out.println("setCookie  baseUrl:  "+baseUrl);
-    System.out.println("setCookie  cookieList:  "+cookieList);
-
     if (cookieList.size() > 0) {
       for (String cookie : cookieList) {
         cookieManager.setCookie(baseUrl, cookie);
