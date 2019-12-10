@@ -4,6 +4,7 @@
 
 package io.flutter.plugins.webviewflutter;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.View;
 import io.flutter.plugin.common.BinaryMessenger;
