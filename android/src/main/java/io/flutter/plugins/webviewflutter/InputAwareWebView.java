@@ -10,7 +10,6 @@ import android.content.Context;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebView;
-import io.flutter.view.FlutterView;
 
 /**
  * A WebView subclass that mirrors the same implementation hacks that the system WebView does in

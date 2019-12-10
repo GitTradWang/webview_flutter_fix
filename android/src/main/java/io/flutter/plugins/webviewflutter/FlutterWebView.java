@@ -6,15 +6,21 @@ package io.flutter.plugins.webviewflutter;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.Activity;
+import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.display.DisplayManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Handler;
 import android.view.View;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient.FileChooserParams;
 import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
@@ -25,11 +31,14 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.platform.PlatformView;
+import io.flutter.plugins.webviewflutter.FlutterWebChromeClient.OpenFileChooserCallBack;
+import io.flutter.plugins.webviewflutter.result.ActivityResult;
+import io.flutter.plugins.webviewflutter.result.ActivityResultCall;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class FlutterWebView implements PlatformView, MethodCallHandler {
+public class FlutterWebView implements PlatformView, MethodCallHandler, OpenFileChooserCallBack {
 
   private static final String JS_CHANNEL_NAMES_FIELD = "javascriptChannelNames";
   private final InputAwareWebView webView;
@@ -39,6 +48,8 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
 
   private Map<String, String> cookies;
 
+  Context context;
+
   @TargetApi(VERSION_CODES.JELLY_BEAN_MR1)
   @SuppressWarnings("unchecked")
   FlutterWebView(
@@ -47,6 +58,8 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
       int id,
       Map<String, Object> params,
       final View containerView) {
+
+    this.context = containerView.getContext();
 
     cookies = (Map<String, String>) params.get("cookies");
 
@@ -60,6 +73,8 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     platformThreadHandler = new Handler(context.getMainLooper());
     // Allow local storage.
     webView.getSettings().setDomStorageEnabled(true);
+
+    webView.setWebChromeClient(new FlutterWebChromeClient(this));
 
     settings(webView);
 
@@ -171,7 +186,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     if (headers == null) {
       headers = Collections.emptyMap();
     }
-    FlutterCookieManager.setCookie(getView().getContext(),url,cookies);
+    FlutterCookieManager.setCookie(getView().getContext(), url, cookies);
     webView.loadUrl(url, headers);
     result.success(null);
   }
@@ -395,5 +410,61 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     methodChannel.setMethodCallHandler(null);
     webView.dispose();
     webView.destroy();
+  }
+
+  @Override
+  public void openFileChooserCallBack(final ValueCallback<Uri> uploadMsg, String acceptType) {
+    new ActivityResult(context).startActivityForResult(getImageChooserIntent()).setOnActivityResult(new ActivityResultCall() {
+      @Override
+      public void onResult(Intent intent, int resultCode) {
+
+        if (uploadMsg == null) {
+          return;
+        }
+
+        if (resultCode == Activity.RESULT_OK && intent != null) {
+          uploadMsg.onReceiveValue(intent.getData());
+        }
+      }
+    });
+  }
+
+  @Override
+  public void showFileChooserCallBack(final ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+
+    new ActivityResult(context).startActivityForResult(getImageChooserIntent()).setOnActivityResult(new ActivityResultCall() {
+      @Override
+      public void onResult(Intent intent, int resultCode) {
+
+        if (filePathCallback == null) {
+          return;
+        }
+
+        if (resultCode == Activity.RESULT_OK && intent != null) {
+          Uri[] results = null;
+          String dataString = intent.getDataString();
+          ClipData clipData = intent.getClipData();
+
+          if (clipData != null) {
+            results = new Uri[clipData.getItemCount()];
+            for (int i = 0; i < clipData.getItemCount(); i++) {
+              ClipData.Item item = clipData.getItemAt(i);
+              results[i] = item.getUri();
+            }
+          }
+          if (dataString != null) {
+            results = new Uri[]{Uri.parse(dataString)};
+          }
+          filePathCallback.onReceiveValue(results);
+        }
+      }
+    });
+  }
+
+  private Intent getImageChooserIntent() {
+    Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+    i.addCategory(Intent.CATEGORY_OPENABLE);
+    i.setType("image/*");
+    return Intent.createChooser(i, "Image Chooser");
   }
 }
