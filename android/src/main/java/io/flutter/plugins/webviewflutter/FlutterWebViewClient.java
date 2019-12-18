@@ -5,13 +5,13 @@
 package io.flutter.plugins.webviewflutter;
 
 import android.annotation.TargetApi;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import androidx.annotation.NonNull;
 import androidx.webkit.WebViewClientCompat;
 import io.flutter.plugin.common.MethodChannel;
 import java.util.HashMap;
@@ -60,10 +60,16 @@ class FlutterWebViewClient {
     // We proceed assuming that the navigation is targeted to the main frame. If the page had any
     // frames they will be loaded in the main frame instead.
     Log.w(
-        TAG,
-        "Using a navigationDelegate with an old webview implementation, pages with frames or iframes will not work");
+            TAG,
+            "Using a navigationDelegate with an old webview implementation, pages with frames or iframes will not work");
     notifyOnNavigationRequest(url, null, view, true);
     return true;
+  }
+
+  private void onPageStarted(WebView view, String url) {
+    Map<String, Object> args = new HashMap<>();
+    args.put("url", url);
+    methodChannel.invokeMethod("onPageStarted", args);
   }
 
   private void onPageFinished(WebView view, String url) {
@@ -73,13 +79,13 @@ class FlutterWebViewClient {
   }
 
   private void notifyOnNavigationRequest(
-      String url, Map<String, String> headers, WebView webview, boolean isMainFrame) {
+          String url, Map<String, String> headers, WebView webview, boolean isMainFrame) {
     HashMap<String, Object> args = new HashMap<>();
     args.put("url", url);
     args.put("isForMainFrame", isMainFrame);
     if (isMainFrame) {
       methodChannel.invokeMethod(
-          "navigationRequest", args, new OnNavigationRequestResult(url, headers, webview));
+              "navigationRequest", args, new OnNavigationRequestResult(url, headers, webview));
     } else {
       methodChannel.invokeMethod("navigationRequest", args);
     }
@@ -107,6 +113,11 @@ class FlutterWebViewClient {
       }
 
       @Override
+      public void onPageStarted(WebView view, String url, Bitmap favicon) {
+        FlutterWebViewClient.this.onPageStarted(view, url);
+      }
+
+      @Override
       public void onPageFinished(WebView view, String url) {
         FlutterWebViewClient.this.onPageFinished(view, url);
       }
@@ -123,14 +134,18 @@ class FlutterWebViewClient {
   private WebViewClientCompat internalCreateWebViewClientCompat() {
     return new WebViewClientCompat() {
       @Override
-      public boolean shouldOverrideUrlLoading(
-          @NonNull WebView view, @NonNull WebResourceRequest request) {
+      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         return FlutterWebViewClient.this.shouldOverrideUrlLoading(view, request);
       }
 
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, String url) {
         return FlutterWebViewClient.this.shouldOverrideUrlLoading(view, url);
+      }
+
+      @Override
+      public void onPageStarted(WebView view, String url, Bitmap favicon) {
+        FlutterWebViewClient.this.onPageStarted(view, url);
       }
 
       @Override
@@ -174,7 +189,7 @@ class FlutterWebViewClient {
     @Override
     public void notImplemented() {
       throw new IllegalStateException(
-          "navigationRequest must be implemented by the webview method channel");
+              "navigationRequest must be implemented by the webview method channel");
     }
 
     private void loadUrl() {

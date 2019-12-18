@@ -69,6 +69,9 @@ enum NavigationDecision {
 /// See also: [WebView.navigationDelegate].
 typedef NavigationDecision NavigationDelegate(NavigationRequest navigation);
 
+/// Signature for when a [WebView] has started loading a page.
+typedef void PageStartedCallback(String url);
+
 /// Signature for when a [WebView] has finished loading a page.
 typedef void PageFinishedCallback(String url);
 
@@ -140,6 +143,7 @@ class WebView extends StatefulWidget {
     this.navigationDelegate,
     this.gestureRecognizers,
     this.onPageFinished,
+    this.onPageStarted,
     this.debuggingEnabled = false,
     this.userAgent,
     this.initialMediaPlaybackPolicy = AutoMediaPlaybackPolicy.require_user_action_for_all_media_types,
@@ -266,6 +270,9 @@ class WebView extends StatefulWidget {
   /// directly in the HTML has been loaded and code injected with
   /// [WebViewController.evaluateJavascript] can assume this.
   final PageFinishedCallback onPageFinished;
+
+  /// Invoked when a page starts loading.
+  final PageStartedCallback onPageStarted;
 
   /// Controls whether WebView debugging is enabled.
   ///
@@ -456,6 +463,13 @@ class _PlatformCallbacksHandler implements WebViewPlatformCallbacksHandler {
     }
     for (JavascriptChannel channel in channels) {
       _javascriptChannels[channel.name] = channel;
+    }
+  }
+
+  @override
+  void onPageStarted(String url) {
+    if (_widget.onPageStarted != null) {
+      _widget.onPageStarted(url);
     }
   }
 }
