@@ -63,6 +63,10 @@ public class FlutterWebView implements PlatformView, MethodCallHandler, OpenFile
             Map<String, Object> params,
             final View containerView) {
 
+        if (containerView != null) {
+            this.context = containerView.getContext();
+        }
+
         cookies = (Map<String, String>) params.get("cookies");
 
         DisplayListenerProxy displayListenerProxy = new DisplayListenerProxy();
