@@ -18,7 +18,6 @@ import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Handler;
-import android.support.annotation.NonNull;
 import android.view.View;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient.FileChooserParams;
@@ -26,6 +25,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import androidx.annotation.NonNull;
 
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
